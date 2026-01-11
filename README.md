@@ -2,6 +2,9 @@
 
 Visual element selector for extracting HTML and screenshots from any website.
 
+<img width="1552" height="1012" alt="Screenshot 2026-01-11 at 15 33 21" src="https://github.com/user-attachments/assets/bc85c397-e9fb-4515-b3b7-d66728558686" />
+
+
 ## Installation
 
 ```bash
