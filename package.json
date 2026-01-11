@@ -1,6 +1,6 @@
 {
   "name": "cluso-inspector",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Visual element selector for extracting HTML and screenshots from websites",
   "main": "main.js",
   "bin": {
