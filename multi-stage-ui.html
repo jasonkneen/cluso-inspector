@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: white;
+      overflow: hidden;
+    }
+
+    /* Phase container - handles transitions */
+    .phase-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .phase-container.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Generating Phase */
+    #generating-phase {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 24px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(139, 92, 246, 0.1);
+      border-top-color: rgb(139, 92, 246);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .generating-status {
+      text-align: center;
+    }
+
+    .generating-status h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .generating-status p {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .progress-steps {
+      list-style: none;
+      margin-top: 32px;
+    }
+
+    .progress-steps li {
+      padding: 8px 0;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.4);
+      transition: color 0.3s;
+    }
+
+    .progress-steps li.active {
+      color: rgb(139, 92, 246);
+    }
+
+    .progress-steps li.complete {
+      color: rgba(34, 197, 94, 0.8);
+    }
+
+    .progress-steps li.complete::before {
+      content: '✓ ';
+      margin-right: 8px;
+    }
+
+    .progress-steps li.active::before {
+      content: '▸ ';
+      margin-right: 8px;
+    }
+
+    /* Preview Phase */
+    #preview-phase {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      background: #0a0a0a;
+    }
+
+    .preview-header {
+      padding: 20px;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .preview-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .preview-panel {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      overflow: auto;
+    }
+
+    .preview-panel h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .screenshot-container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screenshot-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .component-preview {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 200px;
+    }
+
+    .code-viewer {
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 16px;
+      overflow: auto;
+      max-height: 400px;
+    }
+
+    .code-viewer pre {
+      margin: 0;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #e0e0e0;
+    }
+
+    .preview-footer {
+      padding: 20px;
+      border-top: 1px solid rgba(139, 92, 246, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-info {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .footer-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(139, 92, 246, 0.5);
+    }
+
+    button.primary {
+      background: rgb(139, 92, 246);
+      border-color: rgb(139, 92, 246);
+    }
+
+    button.primary:hover {
+      background: rgb(124, 58, 237);
+    }
+
+    button.success {
+      background: rgb(34, 197, 94);
+      border-color: rgb(34, 197, 94);
+    }
+
+    button.success:hover {
+      background: rgb(22, 163, 74);
+    }
+
+    /* Tab switcher */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tab {
+      padding: 8px 16px;
+      border: none;
+      background: none;
+      color: rgba(255, 255, 255, 0.5);
+      border-bottom: 2px solid transparent;
+      font-size: 13px;
+    }
+
+    .tab.active {
+      color: rgb(139, 92, 246);
+      border-bottom-color: rgb(139, 92, 246);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Generating Phase -->
+  <div id="generating-phase" class="phase-container">
+    <div class="spinner"></div>
+    <div class="generating-status">
+      <h2>Generating Component</h2>
+      <p id="generating-step">Extracting React Fiber tree...</p>
+    </div>
+    <ul class="progress-steps">
+      <li id="step-extract" class="active">Extracting component structure</li>
+      <li id="step-screenshot">Capturing screenshot</li>
+      <li id="step-generate">Generating React code</li>
+      <li id="step-preview">Preparing preview</li>
+    </ul>
+  </div>
+
+  <!-- Preview Phase -->
+  <div id="preview-phase" class="phase-container">
+    <div class="preview-header">
+      <div>
+        <h1 id="component-name">Component Preview</h1>
+        <p style="font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-top: 4px;" id="component-source"></p>
+      </div>
+      <div class="header-actions">
+        <button onclick="window.clonereactUI.copyCode()">Copy Code</button>
+        <button class="success" onclick="window.clonereactUI.exportFiles()">Export Files</button>
+        <button onclick="window.clonereactUI.startOver()">Start Over</button>
+      </div>
+    </div>
+
+    <div class="preview-content">
+      <!-- Left: Original Screenshot -->
+      <div class="preview-panel">
+        <h3>Original (Screenshot)</h3>
+        <div class="screenshot-container">
+          <img id="original-screenshot" src="" alt="Original component" />
+        </div>
+      </div>
+
+      <!-- Right: Generated Component + Code -->
+      <div class="preview-panel">
+        <div class="tabs">
+          <button class="tab active" onclick="window.clonereactUI.switchTab('render', this)">Rendered</button>
+          <button class="tab" onclick="window.clonereactUI.switchTab('code', this)">Code</button>
+          <button class="tab" onclick="window.clonereactUI.switchTab('styles', this)">Styles</button>
+          <button class="tab" onclick="window.clonereactUI.switchTab('data', this)">Data</button>
+        </div>
+
+        <div id="tab-render" class="tab-content active">
+          <h3>Generated Component</h3>
+          <div class="component-preview" id="component-render">
+            <p style="color: #666;">Component will render here...</p>
+          </div>
+        </div>
+
+        <div id="tab-code" class="tab-content">
+          <div class="code-viewer">
+            <pre id="component-code"></pre>
+          </div>
+        </div>
+
+        <div id="tab-styles" class="tab-content">
+          <div class="code-viewer">
+            <pre id="component-styles"></pre>
+          </div>
+        </div>
+
+        <div id="tab-data" class="tab-content">
+          <div class="code-viewer">
+            <pre id="component-data"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-footer">
+      <div class="footer-info">
+        <span id="file-count">4 files generated</span>
+        <span style="margin: 0 8px;">·</span>
+        <span id="file-size">1.4 MB</span>
+      </div>
+      <div class="footer-actions">
+        <button onclick="window.clonereactUI.openFolder()">Open in Finder</button>
+        <button class="primary" onclick="window.clonereactUI.done()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // UI State Management
+    window.clonereactUI = {
+      currentPhase: 'selection', // selection, generating, preview
+      generatedData: null,
+
+      // Transition to generating phase
+      showGenerating() {
+        this.currentPhase = 'generating';
+        document.getElementById('generating-phase').classList.add('active');
+
+        // Animate progress steps
+        this.animateSteps();
+      },
+
+      // Animate progress steps
+      async animateSteps() {
+        const steps = ['step-extract', 'step-screenshot', 'step-generate', 'step-preview'];
+        const messages = [
+          'Extracting component structure...',
+          'Capturing screenshot...',
+          'Generating React code...',
+          'Preparing preview...'
+        ];
+
+        for (let i = 0; i < steps.length; i++) {
+          document.getElementById('generating-step').textContent = messages[i];
+
+          // Mark previous complete
+          if (i > 0) {
+            document.getElementById(steps[i - 1]).classList.remove('active');
+            document.getElementById(steps[i - 1]).classList.add('complete');
+          }
+
+          // Mark current active
+          document.getElementById(steps[i]).classList.add('active');
+
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+      },
+
+      // Transition to preview phase
+      showPreview(data) {
+        this.generatedData = data;
+
+        // Hide generating
+        document.getElementById('generating-phase').classList.remove('active');
+
+        // Show preview
+        setTimeout(() => {
+          document.getElementById('preview-phase').classList.add('active');
+
+          // Populate preview
+          document.getElementById('component-name').textContent = data.componentName;
+          document.getElementById('component-source').textContent = 'from ' + data.sourceUrl;
+          document.getElementById('original-screenshot').src = data.screenshot;
+          document.getElementById('component-code').textContent = data.code;
+          document.getElementById('component-styles').textContent = data.css;
+          document.getElementById('component-data').textContent = JSON.stringify(data.extractionData, null, 2);
+          document.getElementById('file-count').textContent = data.fileCount + ' files generated';
+          document.getElementById('file-size').textContent = data.totalSize;
+
+          // Render component (simplified - just show code for now)
+          const codePreview = this.escapeHtml(data.code.substring(0, 500));
+          document.getElementById('component-render').innerHTML =
+            '<div style="padding: 20px; background: #f9fafb; border-radius: 8px; color: #1f2937;">' +
+              '<p style="font-size: 13px; color: #6b7280; margin-bottom: 12px;">Preview:</p>' +
+              '<div style="font-family: monospace; white-space: pre-wrap; font-size: 12px;">' + codePreview + '...</div>' +
+            '</div>';
+        }, 500);
+      },
+
+      escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      },
+
+      // Switch tabs
+      switchTab(tabName, buttonElement) {
+        // Update tab buttons
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        if (buttonElement) {
+          buttonElement.classList.add('active');
+        }
+
+        // Update content
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('tab-' + tabName).classList.add('active');
+      },
+
+      // Actions
+      copyCode() {
+        if (!this.generatedData) return;
+        navigator.clipboard.writeText(this.generatedData.code);
+        alert('Code copied to clipboard!');
+      },
+
+      exportFiles() {
+        // Signal to main process to open folder
+        window.clonereact.exportFiles();
+      },
+
+      openFolder() {
+        window.clonereact.openFolder();
+      },
+
+      startOver() {
+        // Reset to selection phase
+        document.getElementById('preview-phase').classList.remove('active');
+        document.getElementById('generating-phase').classList.remove('active');
+        this.currentPhase = 'selection';
+        this.generatedData = null;
+
+        // Tell main process to reload page
+        window.clonereact.startOver();
+      },
+
+      done() {
+        window.clonereact.close();
+      }
+    };
+  </script>
+</body>
+</html>

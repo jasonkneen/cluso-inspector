@@ -1,0 +1,227 @@
+<style>
+  #__clonereact_selector__ {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999999;
+    pointer-events: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  #__clonereact_toolbar__ {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.2);
+  }
+
+  #__clonereact_toolbar__ button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  #__clonereact_toolbar__ button:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.5);
+  }
+
+  #__clonereact_toolbar__ button.primary {
+    background: rgb(139, 92, 246);
+    border-color: rgb(139, 92, 246);
+  }
+
+  #__clonereact_toolbar__ button.primary:hover {
+    background: rgb(124, 58, 237);
+  }
+
+  #__clonereact_toolbar__ .info {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+  }
+
+  #__clonereact_highlight__ {
+    position: absolute;
+    pointer-events: none;
+    border: 2px solid rgb(59, 130, 246);
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    transition: all 0.1s ease-out;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  }
+
+  #__clonereact_label__ {
+    position: absolute;
+    background: rgb(59, 130, 246);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .clonereact-selected {
+    outline: 3px solid rgb(139, 92, 246) !important;
+    outline-offset: 2px;
+    background: rgba(139, 92, 246, 0.05) !important;
+  }
+</style>
+
+<div id="__clonereact_toolbar__">
+  <div class="info">
+    <span id="__clonereact_count__">0 selected</span>
+  </div>
+  <button id="__clonereact_clear__">Clear</button>
+  <button id="__clonereact_extract__" class="primary">Extract Component</button>
+  <button id="__clonereact_cancel__">Cancel</button>
+</div>
+
+<div id="__clonereact_highlight__" style="display: none;"></div>
+<div id="__clonereact_label__" style="display: none;"></div>
+
+<script>
+  window.__CLONEREACT_SELECTOR__ = {
+    selectedElements: new Set(),
+    highlightElement: null,
+    labelElement: null,
+
+    init() {
+      this.highlightElement = document.getElementById('__clonereact_highlight__');
+      this.labelElement = document.getElementById('__clonereact_label__');
+
+      // Enable pointer events on body for selection
+      document.body.style.cursor = 'crosshair';
+
+      // Event listeners
+      document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+      document.addEventListener('click', this.handleClick.bind(this), true);
+
+      // Toolbar buttons
+      document.getElementById('__clonereact_extract__').addEventListener('click', this.extractSelected.bind(this));
+      document.getElementById('__clonereact_clear__').addEventListener('click', this.clearSelected.bind(this));
+      document.getElementById('__clonereact_cancel__').addEventListener('click', this.cancel.bind(this));
+    },
+
+    handleMouseMove(e) {
+      const target = e.target;
+
+      // Ignore our own UI
+      if (target.closest('#__clonereact_selector__')) {
+        this.highlightElement.style.display = 'none';
+        this.labelElement.style.display = 'none';
+        return;
+      }
+
+      // Get element bounds
+      const rect = target.getBoundingClientRect();
+
+      // Update highlight
+      this.highlightElement.style.display = 'block';
+      this.highlightElement.style.top = rect.top + window.scrollY + 'px';
+      this.highlightElement.style.left = rect.left + window.scrollX + 'px';
+      this.highlightElement.style.width = rect.width + 'px';
+      this.highlightElement.style.height = rect.height + 'px';
+
+      // Update label
+      const tagName = target.tagName.toLowerCase();
+      const className = target.className ? '.' + target.className.split(' ')[0] : '';
+      const label = tagName + className;
+
+      this.labelElement.textContent = label;
+      this.labelElement.style.display = 'block';
+      this.labelElement.style.top = Math.max(10, rect.top + window.scrollY - 30) + 'px';
+      this.labelElement.style.left = rect.left + window.scrollX + 'px';
+    },
+
+    handleClick(e) {
+      const target = e.target;
+
+      // Ignore our own UI
+      if (target.closest('#__clonereact_selector__')) {
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Toggle selection
+      if (this.selectedElements.has(target)) {
+        this.selectedElements.delete(target);
+        target.classList.remove('clonereact-selected');
+      } else {
+        // Single select for now (can add Cmd/Ctrl multi-select later)
+        this.clearSelected();
+        this.selectedElements.add(target);
+        target.classList.add('clonereact-selected');
+      }
+
+      this.updateCount();
+    },
+
+    clearSelected() {
+      this.selectedElements.forEach(el => {
+        el.classList.remove('clonereact-selected');
+      });
+      this.selectedElements.clear();
+      this.updateCount();
+    },
+
+    updateCount() {
+      const count = this.selectedElements.size;
+      document.getElementById('__clonereact_count__').textContent =
+        count === 0 ? 'Hover to highlight, click to select' :
+        count === 1 ? '1 element selected' :
+        count + ' elements selected';
+    },
+
+    async extractSelected() {
+      if (this.selectedElements.size === 0) {
+        alert('Please select at least one element');
+        return;
+      }
+
+      const elementsArray = Array.from(this.selectedElements);
+
+      // Use the extractor to get all data
+      const extractions = [];
+
+      for (const element of elementsArray) {
+        const data = await window.__REACT_COMPONENT_EXTRACTOR__.extractElement(element);
+        extractions.push(data);
+      }
+
+      // Send to main process
+      window.clonereact.sendExtraction({
+        success: true,
+        url: window.location.href,
+        timestamp: new Date().toISOString(),
+        extractions,
+      });
+    },
+
+    cancel() {
+      window.clonereact.cancel();
+    }
+  };
+</script>

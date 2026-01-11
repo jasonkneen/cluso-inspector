@@ -1,0 +1,48 @@
+{
+  "name": "cluso-inspector",
+  "version": "1.0.1",
+  "description": "Visual element selector for extracting HTML and screenshots from websites",
+  "main": "main.js",
+  "bin": {
+    "cluso-inspector": "./bin/cluso-inspector.js"
+  },
+  "files": [
+    "bin/",
+    "assets/",
+    "main.js",
+    "preload.js",
+    "cluso-inspector.js",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "electron .",
+    "prepublishOnly": "npm pack --dry-run"
+  },
+  "keywords": [
+    "electron",
+    "inspector",
+    "component",
+    "extraction",
+    "html",
+    "screenshot",
+    "react",
+    "clonereact",
+    "web-scraping"
+  ],
+  "author": "Jason Kneen",
+  "license": "MIT",
+  "homepage": "https://github.com/jasonkneen/clone-react-skill#readme",
+  "bugs": {
+    "url": "https://github.com/jasonkneen/clone-react-skill/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jasonkneen/clone-react-skill.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "electron": "^28.0.0"
+  }
+}
